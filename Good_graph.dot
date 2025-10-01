@@ -1,0 +1,117 @@
+digraph "Good_graph_with_holder_v11_traceable" {
+  graph [ rankdir=L, fontsize=10, fontname="Helvetica", labelloc="t", labeljust="l",
+         label="",
+         size="8,7!", margin="0.2,0.2", ratio=compress, nodesep="0.25", ranksep="0.35 equally", splines=true
+         ];
+  node  [shape=box, style=filled, fillcolor="#f7f7f9", fontname="Helvetica", fontsize=9];
+  edge  [fontname="Helvetica", arrowsize=0.6, fontsize=8];
+
+  /* === Initial techniques (rank=source) === */
+  { rank = source; n0; n1; n2; n3; n4; n5; h0; h4; }
+  n0 [label="n0: [T1190]\nExploit Public-Facing App\n(EdgeGW)", fillcolor="#f59e0b"];
+  n1 [label="n1: [T1195]\nSupply Chain Compromise\n(IssuerApp)", fillcolor="#f59e0b"];
+  n2 [label="n2: [T1195]\nSupply Chain Compromise\n(KEYSvc)", fillcolor="#f59e0b"];
+  n3 [label="n3: [T1110]\nBrute Force / Password Guessing\n(IssuerApp)", fillcolor="#f59e0b"];
+  n4 [label="n4: [T1078]\nValid Accounts (stolen/valid)\n(IssuerApp)", fillcolor="#f59e0b"];
+  n5 [label="n5: [T1078]\nValid Accounts (stolen/valid)\n(KEYSvc)", fillcolor="#f59e0b"];
+
+  /* === New: Holder-driven initial chain (traceable) === */
+  h0 [label="h0: [T1566]\nPhishing / Social Engineering\n(Holder / Wallet)", fillcolor="#f59e0b"];
+  h1 [label="h1: [T1204]\nUser Execution (malicious app/plug-in)\n(Holder / Wallet)"];
+  h2 [label="h2: [T1056]\nInput Capture (keylogging)\n(Holder / Wallet)"];
+  h3 [label="h3: [T1555]\nCredentials from Password Stores\n(Holder / Wallet)"];
+  h4 [label="h4: [T1528]\nSteal Application Access Token\n(Holder / Wallet)", fillcolor="#f59e0b"];
+
+  /* === EdgeGW → IssuerApp (compact; unchanged) === */
+  n6  [label="n6: [T1046]\nNetwork Service Discovery\n(EdgeGW)"];
+  n9  [label="n9: [T1021]\nRemote Services (pivot)\n(IssuerApp)"];
+  n0 -> n6 [label="p=0.35"]; n6 -> n9 [label="p=0.30"]; n0 -> n9 [label="p=0.20"];
+
+  /* === IssuerApp compromise (compact; unchanged) === */
+  n12 [label="n12: [T1003]\nOS Credential Dumping\n(IssuerApp)"];
+  n3  -> n12 [label="p=0.30"]; n4 -> n12 [label="p=0.35"]; n9 -> n12 [label="p=0.40"]; n1 -> n12 [label="p=0.60"];
+
+  /* === KEYSvc essential steps (unchanged) === */
+  n17 [label="n17: [T1550]\nUse of Valid Accounts\n(KEYSvc)"];
+  n22 [label="n22: [T1649]\nSteal/Forge Certificates\n(KEYSvc)"];
+  n12 -> n17 [label="p=0.40"]; n5 -> n17 [label="p=0.35"]; n2 -> n22 [label="p=0.60"];
+
+  /* === KeyStore entry — parallel (unchanged) === */
+  n27 [label="n27: [T1550]\nUse of Valid Accounts\n(KeyStore)"];
+  n28 [label="n28: [T1059]\nCommand & Scripting Interpreter\n(KeyStore)"];
+  n30 [label="n30: [T1210]\nExploit Remote/Service\n(KeyStore)"];
+  n31 [label="n31: [T1003]\nOS Credential Dumping\n(KeyStore)"];
+  n32 [label="n32: [T1005]\nData from Local System (Key Dump)\n(KeyStore)"];
+
+  /* === Holder → Issuer/Edge: explicit traceable bridges === */
+  h0 -> h1  [label="p=0.50"];  /* phishing -> user runs payload */
+  h1 -> h2  [label="p=0.55"];  /* keylogger active */
+  h2 -> h3  [label="p=0.60"];  /* captured creds -> pw stores */
+  h3 -> n4  [label="p=0.50"];  /* use holder creds to gain IssuerApp account */
+  h4 -> n4  [label="p=0.55"];  /* stolen app token -> valid account at IssuerApp */
+  h1 -> n0  [label="p=0.30"];  /* DIDComm-like payload enables EdgeGW exploit */
+  /* from n4 the chain is already traceable: n4 -> n12 -> n17/n22 -> (n27|n28|n30) -> n31 -> n32 -> finals */
+
+  /* === Parallel entry edges to KeyStore (unchanged) === */
+  n17 -> n27 [label="p=0.35"];  n17 -> n28 [label="p=0.35"];  n17 -> n30 [label="p=0.35"];
+  n22 -> n27 [label="p=0.50"];  n22 -> n30 [label="p=0.40"];
+  n27 -> n28 [label="p=0.35"];
+  n28 -> n31 [label="p=0.45"];
+  n30 -> n31 [label="p=0.60"];
+  n31 -> n32 [label="p=0.40"];
+
+  /* === Finals (enriched; unchanged) === */
+  n36 [label="n36: [T1041]\nExfiltration Over C2\n(KeyStore)"];
+  n37 [label="n37: [T1565.001]\nStored Data Manipulation\n(KeyStore)"];
+  n38 [label="n38: [T1486]\nData Encrypted for Impact\n(KeyStore)"];
+  n39 [label="n39: [T1485]\nData Destruction / Wipe\n(KeyStore)"];
+  n40 [label="n40: [T1562.002]\nImpair Defenses (disable audit)\n(KeyStore)"];
+  n41 [label="n41: [T1070]\nIndicator Removal on Host\n(KeyStore)"];
+  n42 [label="n42: [T1499]\nEndpoint DoS\n(KeyStore)"];
+  n43 [label="n43: [T1529]\nSystem Shutdown/Reboot\n(KeyStore)"];
+  n44 [label="n44: [T1561]\nDisk Wipe\n(KeyStore)"];
+  n45 [label="n45: [T1490]\nInhibit System Recovery\n(KeyStore)"];
+  n46 [label="n46: [T1489]\nService Stop\n(KeyStore)"];
+  n47 [label="n47: [T1555]\nCredentials from Password Stores\n(KeyStore)"];
+  n48 [label="n48: [T1528]\nSteal Application Access Token\n(KeyStore)"];
+  n49 [label="n49: [T1134]\nAccess Token Manipulation\n(KeyStore)"];
+  n50 [label="n50: [T1548]\nAbuse Elevation Control Mechanism\n(KeyStore)"];
+  n51 [label="n51: [T1048]\nExfiltration Over Alternative Protocol\n(KeyStore)"];
+
+  /* finals from footholds */
+  n32 -> n36 [label="p=0.50"]; n32 -> n37 [label="p=0.55"]; n32 -> n38 [label="p=0.35"]; n32 -> n39 [label="p=0.20"]; n32 -> n40 [label="p=0.40"]; n32 -> n42 [label="p=0.30"]; n32 -> n51 [label="p=0.65"];
+  n28 -> n43 [label="p=0.25"]; n28 -> n44 [label="p=0.30"]; n28 -> n45 [label="p=0.35"]; n28 -> n46 [label="p=0.40"]; n28 -> n47 [label="p=0.45"]; n28 -> n50 [label="p=0.35"];
+  n31 -> n47 [label="p=0.40"];
+  n47 -> n48 [label="p=0.50"]; n48 -> n49 [label="p=0.55"];
+  n27 -> n49 [label="p=0.35"]; n27 -> n50 [label="p=0.35"];
+  n40 -> n41 [label="p=0.45"];
+
+  /* === Impacts (KeyStore attributes, rank=sink) === */
+  AC   [label="AC — Access Control", shape=oval, fillcolor="#ef4444", fontcolor="white"];
+  Authz[label="Authz — Authorization", shape=oval, fillcolor="#ef4444", fontcolor="white"];
+  C    [label="C — Confidentiality", shape=oval, fillcolor="#ef4444", fontcolor="white"];
+  I    [label="I — Integrity", shape=oval, fillcolor="#ef4444", fontcolor="white"];
+  A    [label="A — Availability", shape=oval, fillcolor="#ef4444", fontcolor="white"];
+  Au   [label="Au — Auditability", shape=oval, fillcolor="#ef4444", fontcolor="white"];
+  R    [label="R — Recoverability", shape=oval, fillcolor="#ef4444", fontcolor="white"];
+  { rank = sink; AC; Authz; C; I; A; Au; R; }
+
+  /* finals → attributes */
+  /* Confidentiality */
+  n36 -> C [label="p=0.65"]; n51 -> C [label="p=0.60"]; n32 -> C [label="p=0.65"]; n31 -> C [label="p=0.40"]; n47 -> C [label="p=0.50"];
+  /* Access control */
+  n31 -> AC [label="p=0.40"]; n47 -> AC [label="p=0.50"]; n48 -> AC [label="p=0.55"]; n49 -> AC [label="p=0.55"]; n27 -> AC [label="p=0.40"]; n50 -> AC [label="p=0.40"];
+  /* Integrity */
+  n37 -> I  [label="p=0.55"]; n38 -> I  [label="p=0.50"]; n39 -> I  [label="p=0.50"];
+  /* Availability */
+  n38 -> A  [label="p=0.60"]; n39 -> A  [label="p=0.55"]; n42 -> A  [label="p=0.40"]; n43 -> A  [label="p=0.40"]; n44 -> A  [label="p=0.65"];
+  /* Recoverability */
+  n45 -> R  [label="p=0.55"]; n46 -> R  [label="p=0.45"]; n38 -> R  [label="p=0.30"]; n39 -> R  [label="p=0.50"];
+  /* Auditability */
+  n40 -> Au [label="p=0.55"]; n41 -> Au [label="p=0.50"];
+  /* Authorization */
+  n36 -> Authz [label="p=0.40"]; n32 -> Authz [label="p=0.55"];
+
+  /* END */
+  label="";
+}
