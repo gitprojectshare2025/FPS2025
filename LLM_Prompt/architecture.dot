@@ -1,0 +1,78 @@
+
+digraph MonBPMN_MultiTier {
+  graph [rankdir=L, fontsize=24, fontname="Helvetica", labelloc="t", labeljust="l",
+         label=""];
+  node  [shape=rounded, style=filled, fillcolor="#f7f7f9", fontname="Helvetica", fontsize=24];
+  edge  [fontname="Helvetica", dir=both, arrowsize=0.7, fontsize=18];
+
+  subgraph cluster_ext {
+    label="External Actors";
+    style=filled; color="#cbd5e1"; fillcolor="#eef2ff";
+
+    
+    EXT01 [shape=component, fillcolor="#ffffff",
+      label="EXT-01\nHolder / Wallet (mobile/web)\n\nActivities:\n- Request Service\n- Send Credential Request\n- Receive Credential\n- Collect VC; Validate VC\n- Receive Proof Request\n- Generate VP; Present VP\n\nSec. attrs: [ID,AC,AuthZ,C,I,P,Au,R,Ctr, Rv]"
+    ];
+    
+
+    EXT02 [shape=component, fillcolor="#ffffff",
+      label="EXT-02\nVerifier\n\nActivities:\n- Send Proof Request\n- Receive VP\n- Resolve DID (query)\n- Retrieve Schema\n- Verify VP; Validate VC\n\nSec. attrs: [ID,C,I,P,Au]"
+    ];
+    
+  }
+
+  subgraph cluster_edge {
+    label="EDGE-01 (DMZ)";
+    style=filled; color="#94a3b8"; fillcolor="#e2e8f0";
+
+    EdgeGW [shape=component,
+      label="EdgeGW\nDIDComm Ingress / API Gateway \nActivities:\n- Forward DIDComm messages\n  (service req, cred req, cred delivery,\n   proof req, VP)\n\nSec. attrs: [C, I, A, Au, Auth, P]"
+    ];
+  }
+
+  subgraph cluster_app {
+    label="APP — Issuer domain services";
+    style=filled; color="#ecfdf5";
+    IssuerApp [shape=component, label="IssuerApp\n• Send Credential Offer\n• Receive Credential Request\n• Assemble VC\n• Deliver VC\n• Validate Identity \n\nSec. attrs:[ID,C,I,A,P, IOP,PORT] "];
+    DIDSvc    [lshape=component, label="DIDSvc\n• Generate DID\n• Register DID \n\nSec. attrs: [ID,ATY,I,Au,PORT]"];
+    KEYSvc    [shape=component, label="KEYSvc\n• Generate issuer Key\n• Store Key\n• Sign VC \n\nSec. attrs: [AC,AuthZ,I,C,A, Au,R,Rv, PORT]"];
+    RevocationSvc [shape=component, label="RevocationSvc\n• Revocation \n\nSec. attrs: [I,A,Au]"];
+    GovernanceSvc [shape=component, label="GovernanceSvc\n• Design Schema & Cred-Def\n• Register Schema \n\nSec. attrs: [ID,I,A,Au,IOP]"];
+   
+  }
+
+  subgraph cluster_data {
+    label="DATA — Stores & Trust Registry";
+    style=filled; color="#facc15"; fillcolor="#fffbeb";
+    AppDB   [label="AppDataStore\n• VC metadata\n• Policies\n• Audit logs \n\nSec. attrs: [AC,AuthZ,C,I,A,Au,R ]", shape=cylinder];
+    KeyStore [label="KeyStore \n• Signing/Rotation keys \n\nSec. attrs: [AC,AuthZ,C,I,A,Au,R ]", shape=cylinder];
+    VDR  [label="VDR\n• Schemas & CredDefs\n• DID Documents\n• Revocation Lists/States \n\nSec. attrs:[I,A, Au]", shape=box3d];
+  }
+
+  // External <-> Edge
+  EXT01  -> EdgeGW [label="VC/VP / DIDComm"];
+  EXT01 -> EXT02 [label="proof request / VP"];
+  EXT02 -> EdgeGW [label="proof request"];
+  // Edge <-> App
+  EdgeGW  -> IssuerApp [label="Offer, Credential, Proof requests"];
+  EdgeGW  -> DIDSvc    [label="DIDComm envelopes (optional)"];
+
+  // App <-> App
+  IssuerApp -> DIDSvc;
+  IssuerApp -> KEYSvc;
+  IssuerApp -> RevocationSvc;
+  IssuerApp -> GovernanceSvc;
+
+  // App <-> Data
+  IssuerApp   -> AppDB   [label="metadata/policies/audit"];
+  KEYSvc      -> KeyStore;
+  DIDSvc      -> VDR  [label="DID publish/resolve"];
+  GovernanceSvc -> VDR [label="Schema/CredDef publish"];
+  RevocationSvc -> VDR [label="Revocation update"];
+
+  // Optional (dashed): direct public reads from Ledger (prefer routed via App)
+  EXT02 -> VDR [ label="Status / Public DID read "];
+  EXT01   -> VDR [ label="Status / Public DID read"];
+
+  //EXT03 -> EdgeGW [label="Admin access"];
+}
