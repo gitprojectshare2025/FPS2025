@@ -1,1 +1,43 @@
 
+#Prompt used for semi-automated construction of the attribute-centred attack graph
+#Below is the exact prompt string used to query the LLM during the semi-automated construction of attribute-centred attack graphs. In the implementation, replace the placeholders \verb|{{DOT}}|, \verb|{{ATTRIBUTE}}|, \verb|{{NODE_NAME}}| and \verb|{{ATTACK_INDEX}}| with the concrete values.
+
+
+
+You are a senior cybersecurity analyst specialized in MITRE ATT&CK-based threat modelling. Respond ONLY with valid JSON. Be conservative: NEVER invent MITRE ATT&CK technique identifiers (T-IDs). If you cannot confidently map to a known ATT&CK technique, set technique_id = "unknown_technique" and provide a brief justification in the corresponding field. For every technique you propose, include the list of associated controls/mitigation and indicate the source of each control as "ATT&CK", "D3FEND", or "inferred". Prioritize any local ATT&CK index provided.
+OBJECTIVE: Construct up to 6 plausible attack paths (ordered sequences of MITRE ATT&CK techniques) that lead to compromise of TARGET = (attribute, asset), using BACKWARD-CHAINING from the TARGET leaf to plausible root techniques.
+TARGET.attribute: "{{ATTRIBUTE}}"
+TARGET.asset: "{{NODE_NAME}}"
+INPUTS:
+DOT: """{{DOT FILE}}"""
+Optional local ATT&CK index : "{{ATTACK_INDEX}}"
+ATTACKER PROFILE:
+Profile: Targeted External Attacker
+    - capability : medium-high
+    - Typical initial access : targeted exploitation of exposed services
+    - Time/budget : medium- long
+    - Motivation : compromise {{ATTRIBUTE}}
+    - attacker_factor = 1.0
+CALIBRATION RULE:
+P0_t = base_rate_t * exposure_factor * adjacency_factor * attacker_factor
+- base_rate_t: empirical frequency from ATT&CK Sightings / DBIR; if unknown use default 0.10 and mark "default used" in output
+- exposure_factor: derived from node.exposure in DOT: public=1.0 ; internal=0.6 ; privileged-only=0.4
+- adjacency_factor: hops to target in DOT: direct on target=1.0 ; 1-hop pivot=0.7 ; 2-hops=0.5
+- attacker_factor = 1.0
+MANDATORY TASKS:
+1) Parse the provided DOT and extract nodes and their fields (type, exposure, controls). Compute the subgraph within maximum 6 hops of TARGET.asset and include those node names in the array nodes_considered.
+2) Perform BACKWARD-CHAINING from TARGET (attribute, asset): identify immediate precursor ATT&CK techniques that would enable the next step toward the TARGET, preserving causal/prerequisite logic, continuing until plausible root techniques (initial access) are reached.
+3) Map steps to existing MITRE ATT&CK technique IDs when possible. DO NOT invent T-IDs. If mapping is uncertain, set technique_id = "unknown_technique" and explain in that step's short_rationale.
+4) Produce up to 6 distinct plausible paths, preferring diversity of initial access vectors and pivots.
+5) For each path include: path_id, confidence (0..1), justification (1-2 sentences), analysis_nodes (list of DOT node names used), and steps (ordered).
+6) For each step include:
+   - step_index (integer)
+   - technique_id (e.g., "T1499" or "unknown_technique")
+   - technique_name
+   - executing_asset (DOT node name)
+   - precondition (short)
+   - P0_multipliers: {"base_rate": <value or "default used">, "exposure_factor": <value>, "adjacency_factor": <value>, "attacker_factor": <value>}
+   - estimated_P0: numeric value computed from the multipliers 
+   - controls: array of objects {"control_id": <id or null>, "control_name": <name>, "source": "ATT&CK" | "D3FEND" | "inferred"}
+7) If default base_rate was used for a technique, set "base_rate": "default used" in that step's P0_multipliers.
+
